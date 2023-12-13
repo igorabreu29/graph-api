@@ -1,5 +1,4 @@
 import { Query, Mutation, Arg } from "type-graphql"
-import { randomUUID } from "node:crypto"
 
 import { CreateUserInput } from "../dto/inputs/create-user-input"
 import { User } from "../dto/models/user-model"
@@ -20,15 +19,14 @@ export class UsersResolver {
     async createUser(@Arg('data', () => CreateUserInput) data: CreateUserInput) {
         const { email, password, name } = data
 
-        const user: User = {
-            id: randomUUID(),
-            name, 
-            email,
-            password,
-            created_at: new Date()
-        }
+        const user = await prisma.user.create({
+            data: {
+                email,
+                password,
+                name
+            }
+        })
 
-        this.users.push(user)
         return user
     }
 
@@ -37,35 +35,32 @@ export class UsersResolver {
         @Arg('id', () => String!) id: string,
         @Arg('data', () => UpdateUserInput) data: UpdateUserInput
         ) {
-        const findIndexUserById = this.users.findIndex(user => {
-            return user.id === id
-        })
+            const { email, name, password } = data
 
-        if (findIndexUserById < 0) {
-            throw new Error('User Not Found.')
-        }
+            const user = prisma.user.update({
+                where: {
+                    id,
+                },
 
-        const { email, name, password } = data
-        
-        this.users[findIndexUserById].id = id
-        this.users[findIndexUserById].email = email
-        this.users[findIndexUserById].password = password
-        this.users[findIndexUserById].name = name
+                data: {
+                    name,
+                    email,
+                    password,
+                }
+            })
 
-        return this.users[findIndexUserById]
+            return user
     }
     
     @Mutation(() => String)
     async delete(
         @Arg('id', () => String!) id: string
     ) {
-        const findIndexUserById = this.users.findIndex(user => user.id === id)
-
-        if (findIndexUserById < 0) {
-            throw new Error('User Not Found.')
-        }
-
-        this.users.splice(findIndexUserById, 1)
+        await prisma.user.delete({
+            where: {
+                id
+            }
+        })
 
         return 'User deleted with success.'
     }
